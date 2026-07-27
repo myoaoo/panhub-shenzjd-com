@@ -217,8 +217,6 @@ const {
   hasResults,
 } = useSearch();
 const { settings, loadSettings } = useSettings();
-const auth = useAuth();
-const requestUnlock = inject<(onSuccess?: () => void) => void>("requestUnlock");
 
 // 获取搜索选项（使用最新的用户设置）
 function getSearchOptions() {
@@ -243,7 +241,7 @@ async function recordHotSearch(keyword: string) {
   } catch (_e) {}
 }
 
-// 执行实际搜索逻辑（供 requestUnlock 回调复用）
+// 执行实际搜索逻辑
 async function doSearch() {
   if (!kw.value || searchState.value.loading) return;
   loadSettings();
@@ -251,17 +249,12 @@ async function doSearch() {
   recordHotSearch(keyword);
   await performSearch({
     ...getSearchOptions(),
-    onAuthRequired: requestUnlock ?? undefined,
   });
 }
 
 // 搜索执行
 async function onSearch() {
   if (!kw.value || searchState.value.loading) return;
-  if (auth.locked.value && requestUnlock) {
-    requestUnlock(doSearch);
-    return;
-  }
   await doSearch();
 }
 
@@ -274,20 +267,9 @@ async function quickSearch(keyword: string) {
 // 继续搜索（从暂停处继续）
 async function handleContinueSearch() {
   if (!searchState.value.paused) return;
-  if (auth.locked.value && requestUnlock) {
-    requestUnlock(async () => {
-      loadSettings();
-      await continueSearch({
-        ...getSearchOptions(),
-        onAuthRequired: requestUnlock ?? undefined,
-      });
-    });
-    return;
-  }
   loadSettings();
   await continueSearch({
     ...getSearchOptions(),
-    onAuthRequired: requestUnlock ?? undefined,
   });
 }
 

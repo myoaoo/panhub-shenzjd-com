@@ -22,8 +22,6 @@ export interface SearchOptions {
     concurrency: number;
     pluginTimeoutMs: number;
   };
-  /** 当搜索接口返回 401 时回调（密码门） */
-  onAuthRequired?: () => void;
 }
 
 export interface SearchState {
@@ -126,8 +124,7 @@ export function useSearch() {
     pluginTimeoutMs: number,
     params: { src: "plugin" | "tg"; plugins?: string; channels?: string },
     label: string,
-    shouldSkip: () => boolean,
-    onAuthRequired?: () => void
+    shouldSkip: () => boolean
   ): () => Promise<MergedLinks> {
     return async () => {
       if (shouldSkip()) return {};
@@ -151,7 +148,6 @@ export function useSearch() {
         return extractMergedFromResponse(response.data);
       } catch (error: any) {
         if (error?.name === "AbortError") return {};
-        if (error?.statusCode === 401) onAuthRequired?.();
         devWarn(`${label} search failed:`, error);
         return {};
       } finally {
@@ -185,7 +181,6 @@ export function useSearch() {
     const searchTasks: Array<() => Promise<MergedLinks>> = [];
 
     const shouldSkip = () => mySeq !== searchSeq || state.value.paused;
-    const onAuth = options.onAuthRequired;
 
     // 为每个插件创建独立的搜索任务
     for (const plugin of enabledPlugins) {
@@ -197,8 +192,7 @@ export function useSearch() {
           settings.pluginTimeoutMs,
           { src: "plugin", plugins: plugin },
           `Plugin ${plugin}`,
-          shouldSkip,
-          onAuth
+          shouldSkip
         )
       );
     }
@@ -215,8 +209,7 @@ export function useSearch() {
           settings.pluginTimeoutMs,
           { src: "tg", channels: batch.join(",") },
           `TG batch ${Math.floor(i / tgBatchSize)}`,
-          shouldSkip,
-          onAuth
+          shouldSkip
         )
       );
     }
